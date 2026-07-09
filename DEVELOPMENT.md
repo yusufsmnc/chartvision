@@ -1,0 +1,153 @@
+# 🔬 Development Notes — ChartVision
+
+Bu dosya projenin mimari kararlarını, geliştirme sürecini,
+tespit edilen problemleri ve iyileştirme stratejilerini içerir.
+
+---
+
+## 📅 Geliştirme Süreci
+
+### Veri Pipeline
+- AAPL, MSFT, GOOGL, TSLA için 2019-2024 arası OHLCV verisi çekildi
+- Sliding window (60 gün) ile mum grafiği PNG'leri üretildi
+- RSI, MACD, Bollinger Bands, Volume SMA teknik indikatörleri hesaplandı
+- 3-class etiket stratejisi uygulandı (%1 eşik)
+- Her hisse için ayrı zamansal split yapıldı (70/15/15)
+- Toplam 5,796 görüntü, 5,664 örnek
+
+### Model Geliştirme
+- CNN baseline (ResNet18) ile başlandı → Val Acc %52
+- LSTM modeli eklendi → tek başına Val Acc %43
+- CNN + LSTM fusion denendi → Val Acc %53
+- Ticker embedding eklendi → Val Acc %53.07
+- Backtesting yapıldı → MSFT Sharpe 1.64, GOOGL Sharpe 2.18
+
+### Deployment
+- Streamlit demo yazıldı ve lokalde test edildi
+- GitHub'a push edildi
+- Streamlit Cloud deploy planlanıyor
+
+---
+
+## 🏗️ Mimari Kararlar
+
+### Neden ResNet18?
+- ImageNet pretrained ağırlıkları mevcut — transfer learning için ideal
+- Hafif ve hızlı — az GPU ile eğitilebilir
+- 224x224 görüntülerle iyi çalışıyor
+- Baseline için yeterince güçlü
+- Alternatif: ViT (Vision Transformer) — daha iyi sonuç verebilir ama daha ağır
+
+### Neden LSTM?
+- Zaman serisi verisi için tasarlanmış
+- 60 günlük bağımlılıkları öğrenebilir
+- Teknik indikatörlerin zamansal ilişkisini yakalar
+- Alternatif: Temporal Fusion Transformer — daha iyi ama çok daha karmaşık
+
+### Neden Ticker Embedding?
+- Her hissenin karakteri farklı (TSLA volatil, GOOGL stabil)
+- Model hisse kimliğini öğrenebilir
+- Sadece 16 boyut — çok az parametre ekliyor
+- Sonuç: %52.83 → %53.07 (küçük iyileşme)
+
+### Neden 3-class?
+- Binary (yukarı/aşağı) çok gürültülü
+- %1 eşiği ile yatay bölge tanımlandı
+- Belirsiz günleri ayrı sınıfa koymak modeli rahatlatıyor
+- Sorun: yatay sınıf çok dominant (%51)
+
+### Neden Zamansal Split?
+- Rastgele split → look-ahead bias (gelecek veriyi görme)
+- Her hisse için ayrı split → cross-asset sızıntısı önlendi
+- Gerçek trading koşullarını simüle ediyor
+---
+
+## ⚠️ Tespit Edilen Problemler
+
+### 1. Sınıf Dengesizliği
+- Yatay: %51, Yukarı: %28, Aşağı: %21
+- Model neredeyse her şeyi yatay tahmin ediyor
+- F1-score aşağı ve yukarı sınıfta çok düşük
+
+### 2. Overfitting
+- Train accuracy %100'e ulaşıyor
+- Val accuracy %53'te kalıyor
+- Az veri (5,664 örnek) + derin model = ezberleme
+- Dropout ve early stopping kısmen çözdü ama yetmedi
+
+
+### 3. Piyasa Rejimi Değişimi
+- Train dönemi (2019-2022): güçlü bull market
+- Test dönemi (2023-2024): farklı koşullar
+- AAPL val Acc %68 iken test Acc %25'e düştü
+- Model farklı piyasa koşullarına genelleme yapamıyor
+
+### 4. Cross-Asset Genelleme
+- AAPL tek başına %68, 4 hisse birlikte %53
+- Her hissenin volatilite ve momentum karakteri farklı
+- TSLA için %1 eşik yetersiz — çok daha volatil
+
+### 5. Veri Miktarı
+- 4 hisse, 5 yıl → 5,664 örnek
+- Derin öğrenme için yetersiz
+- Daha fazla hisse ve daha uzun dönem gerekiyor
+
+
+---
+
+## 🚀 İyileştirme Stratejileri
+
+### Kısa Vadeli
+
+**Sınıf Dengesizliği:** CrossEntropyLoss'a sınıf ağırlıkları eklenerek az olan sınıflara daha fazla ağırlık verilebilir. Aşağı sınıfına 2.0, yatay sınıfına 0.5, yukarı sınıfına 1.5 ağırlık uygulanabilir.
+
+**Eşik Değişikliği:** %1 yerine %2 eşik kullanılarak daha net sinyal elde edilebilir. Bu değişiklik yatay örneklerin sayısını azaltır ve sınıf dengesizliğini iyileştirir.
+
+**Focal Loss:** Zor örneklere daha fazla ağırlık veren Focal Loss kullanılarak modelin daha zor sınıfları öğrenmesi sağlanabilir.
+
+### Orta Vadeli
+
+**Daha Fazla Veri:**
+- S&P 500'den 20-30 hisse ekle
+- 10 yıllık veri kullan (2014-2024)
+- Farklı sektörler: finans, enerji, sağlık
+
+**Daha İyi Feature'lar:**
+- Haber sentiment skoru (FinBERT)
+- VIX — piyasa korku endeksi
+- Sektör ETF korelasyonu
+- 52 haftalık high/low mesafesi
+
+**Vision Transformer:** ResNet18 yerine ViT kullanılarak grafik pattern tespiti iyileştirilebilir.
+
+### Uzun Vadeli
+
+**Temporal Fusion Transformer:**
+- LSTM yerine state-of-the-art zaman serisi modeli
+- Attention mechanism ile önemli günlere odaklanır
+- pytorch-forecasting kütüphanesi ile uygulanabilir
+
+**Piyasa Rejimi Tespiti:**
+- Önce rejimi tespit et (bull/bear/sideways)
+- Her rejim için ayrı model eğit
+- HMM (Hidden Markov Model) ile rejim tespiti
+
+**Walk-Forward Validation:**
+- Sabit train/val/test yerine kayan pencere
+- Gerçek trading koşullarına çok daha yakın
+- Her ay model yeniden eğitilir
+---
+
+## 📊 Model Karşılaştırma
+
+| Deney | Val Acc | Test Acc | Not |
+|---|---|---|---|
+| CNN — AAPL tek | %69 | — | Overfitting var |
+| CNN — 4 hisse | %52 | — | Data augmentation eklendi |
+| LSTM — 4 hisse | %43 | — | Tek başına zayıf |
+| Fusion — AAPL tek | %68.87 | — | En iyi single-asset sonuç |
+| Fusion — yanlış split | %39 | — | Split hatası |
+| Fusion — doğru split | %52.83 | — | Her hisse ayrı split |
+| **Fusion + Embedding** | **%53.07** | **%49.18** | **Final model** |
+
+---
