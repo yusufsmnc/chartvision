@@ -1,0 +1,10 @@
+streamlit
+torch
+torchvision
+yfinance
+mplfinance
+ta
+scikit-learn
+pillow
+numpy
+pandas
