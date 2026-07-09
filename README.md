@@ -26,6 +26,8 @@
 | TSLA | 0.42 | — | — |
 
 ## 🏗️ Architecture
+
+```
 Candlestick Chart (PNG)
 ↓
 ResNet18 (CNN)
@@ -41,8 +43,11 @@ Technical Indicators
 Volume SMA, OHLCV)
 ↑
 Ticker Embedding (16-dim)
+```
 
 ## 📁 Project Structure
+
+```
 chartvision/
 ├── app.py                  # Streamlit demo
 ├── src/
@@ -53,6 +58,7 @@ chartvision/
 ├── requirements.txt
 ├── README.md
 └── DEVELOPMENT.md          # Geliştirme süreci ve iyileştirme planı
+```
 
 ## 🛠️ Tech Stack
 
