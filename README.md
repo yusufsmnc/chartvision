@@ -8,7 +8,7 @@
 > Multi-modal deep learning system combining **candlestick chart images** (CNN) and **technical indicators** (LSTM) for stock movement prediction.
 
 ## 🚀 Live Demo
-[Coming soon — Streamlit Cloud]
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://chartvision-indevelopment-hwjfgsci6gqnavzpndv723.streamlit.app/)
 
 ## 📊 Results
 
