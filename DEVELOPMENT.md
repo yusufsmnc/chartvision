@@ -151,3 +151,25 @@ tespit edilen problemleri ve iyileştirme stratejilerini içerir.
 | **Fusion + Embedding** | **%53.07** | **%49.18** | **Final model** |
 
 ---
+## 🧪 Sınıf Dengesizliği Deneyleri
+
+Sınıf dengesizliği problemini çözmek için üç farklı yaklaşım denendi.
+
+### Deney 1 — Eşik Artırma (%1 → %2)
+Yatay bölgeyi daraltmak yerine büyüttü. Sonuç: Yatay %71'e çıktı (önceden %51). Beklenenin tersi etki yarattı, bu yaklaşımdan vazgeçildi.
+
+### Deney 2 — Eşik Azaltma (%1 → %0.5)
+Sınıflar daha dengeli hale geldi (Yukarı %41, Aşağı %34, Yatay %24) ancak günlük piyasa gürültüsü sinyal olarak algılandı. Val Acc %37.74'e düştü — orijinal %53.07'nin çok altında. Küçük eşik, sinyal/gürültü oranını bozdu.
+
+### Deney 3 — Sınıf Ağırlıkları (orijinal %1 eşik ile)
+CrossEntropyLoss'a sınıf ağırlıkları eklendi. Val Acc %51.89 — orijinal modele yakın ama daha düşük. Ağırlıklandırma modelin az örnekli sınıflara aşırı odaklanmasına, bu da genelleme kabiliyetinin azalmasına yol açtı.
+
+### Sonuç
+Üç deney de orijinal modeli (%53.07) geçemedi. Sınıf dengesizliği bu veri setinin doğal bir özelliği — piyasa çoğunlukla yatay hareket ediyor. Zorla dengelemek yerine daha fazla veri ve daha iyi feature'lar ile ilerlemek daha etkili bulundu.
+
+| Deney | Val Acc | Sonuç |
+|---|---|---|
+| Orijinal (%1 eşik, embedding) | %53.07 | Baseline |
+| Eşik %2 | — | Denenmeden vazgeçildi |
+| Eşik %0.5 + ağırlık | %37.74 | Başarısız |
+| Eşik %1 + ağırlık | %51.89 | Hafif düşüş |
