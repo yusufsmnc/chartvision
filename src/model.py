@@ -3,7 +3,7 @@ import torch.nn as nn
 from torchvision import models
 
 class MultiModalModelV2(nn.Module):
-    def __init__(self, num_tickers=4, embedding_dim=16):
+    def __init__(self, num_tickers=16, embedding_dim=16):
         super().__init__()
         self.ticker_embedding = nn.Embedding(num_tickers, embedding_dim)
         base = models.resnet18(weights=None)

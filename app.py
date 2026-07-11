@@ -15,7 +15,10 @@ import sys
 sys.path.append(os.path.dirname(__file__))
 from src.model import MultiModalModelV2
 
-ticker2id = {"AAPL": 0, "MSFT": 1, "GOOGL": 2, "TSLA": 3}
+# 16 hisse
+tickers = ["AAPL", "MSFT", "GOOGL", "TSLA", "NVDA", "META", "AMZN", "JPM",
+           "BAC", "XOM", "CVX", "JNJ", "PFE", "WMT", "DIS", "NFLX"]
+ticker2id = {t: i for i, t in enumerate(tickers)}
 
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -26,9 +29,9 @@ transform = transforms.Compose([
 
 @st.cache_resource
 def load_model():
-    model = MultiModalModelV2()
+    model = MultiModalModelV2(num_tickers=16)
     model.load_state_dict(torch.load(
-        "models/best_multimodal_v3.pth",
+        "models/best_multimodal_16.pth",
         map_location="cpu"
     ))
     model.eval()
@@ -36,7 +39,7 @@ def load_model():
 
 @st.cache_resource
 def load_scaler():
-    with open("models/scaler.pkl", "rb") as f:
+    with open("models/scaler_16.pkl", "rb") as f:
         return pickle.load(f)
 
 def predict(ticker, df, scaler, model):
@@ -71,9 +74,9 @@ def predict(ticker, df, scaler, model):
 
 # UI
 st.title("📈 ChartVision — Hisse Tahmin")
-st.write("Multi-modal deep learning ile hisse senedi yön tahmini")
+st.write("Multi-modal deep learning ile hisse senedi yön tahmini (16 hisse)")
 
-ticker = st.selectbox("Hisse seç", ["AAPL", "MSFT", "GOOGL", "TSLA"])
+ticker = st.selectbox("Hisse seç", tickers)
 
 if st.button("Tahmin Et"):
     with st.spinner("Veri indiriliyor..."):
