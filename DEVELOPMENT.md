@@ -173,3 +173,44 @@ CrossEntropyLoss'a sınıf ağırlıkları eklendi. Val Acc %51.89 — orijinal 
 | Eşik %2 | — | Denenmeden vazgeçildi |
 | Eşik %0.5 + ağırlık | %37.74 | Başarısız |
 | Eşik %1 + ağırlık | %51.89 | Hafif düşüş |
+---
+
+## 📈 Veri Genişletme Deneyi (16 Hisse)
+
+Overfitting ve genelleme problemini çözmek için veri seti 4 hisseden 16 hisseye çıkarıldı.
+
+### Eklenen Hisseler
+Farklı sektörlerden 12 yeni hisse eklendi:
+- **Tech:** NVDA, META, AMZN, NFLX
+- **Finans:** JPM, BAC
+- **Enerji:** XOM, CVX
+- **Sağlık:** JNJ, PFE
+- **Tüketici:** WMT, DIS
+
+### Veri Seti Büyümesi
+| Metrik | Önce | Sonra |
+|---|---|---|
+| Hisse sayısı | 4 | 16 |
+| Toplam örnek | 5,664 | 22,656 |
+| Görüntü sayısı | 5,796 | 23,184 |
+| Train/Val/Test | 3964/848/852 | 15856/3392/3408 |
+
+### Sonuçlar
+| Model | Val Acc | Train Acc | Not |
+|---|---|---|---|
+| 4 hisse | %53.07 | %100 | Aşırı overfitting |
+| **16 hisse + weight decay** | **%56.25** | %65 | Overfitting azaldı |
+| 16 hisse + sınıf ağırlığı | Macro F1 %37.86 | — | Başarısız |
+
+### Öne Çıkan Bulgular
+- **Daha fazla veri gerçek iyileşme sağladı** (%53 → %56)
+- **Overfitting ciddi şekilde azaldı** — train accuracy %100'den %65'e düştü, model artık ezberlemiyor
+- **Sınıf ağırlıkları yine başarısız oldu** — 16 hisse ile de faydası olmadı
+
+### Kalıcı Problem: Sınıf Dengesizliği
+Test seti classification report'u modelin hâlâ çoğunlukla "Yatay" tahmin ettiğini gösterdi:
+- Aşağı recall: 0.00 (neredeyse hiç aşağı tahmin yok)
+- Yatay recall: 0.95 (her şeyi yatay diyor)
+- Yukarı recall: 0.13
+
+Bu, finansal ML'de bilinen bir olgudur — piyasa büyük ölçüde tahmin edilemez olduğu için model belirsizlikte "yatay" demeyi öğrenir. Sınıf ağırlıkları bu davranışı zorla değiştirmeye çalıştığında, doğru olan yatay tahminler de kaçırıldığı için toplam performans düşer.
