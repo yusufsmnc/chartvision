@@ -214,3 +214,59 @@ Test seti classification report'u modelin hâlâ çoğunlukla "Yatay" tahmin ett
 - Yukarı recall: 0.13
 
 Bu, finansal ML'de bilinen bir olgudur — piyasa büyük ölçüde tahmin edilemez olduğu için model belirsizlikte "yatay" demeyi öğrenir. Sınıf ağırlıkları bu davranışı zorla değiştirmeye çalıştığında, doğru olan yatay tahminler de kaçırıldığı için toplam performans düşer.
+
+---
+
+## 🧪 Mimari ve Etiket Stratejisi Deneyleri
+
+16 hisseli veri setiyle %56.25 baseline'a ulaşıldıktan sonra, bu skoru aşmak için iki farklı yönden deneme yapıldı.
+
+### Deney 4 — EfficientNet-B0 (CNN Mimarisi)
+ResNet18 yerine EfficientNet-B0 denendi. Hipotez: daha modern ve verimli bir görüntü modeli, mum grafiği pattern'lerini daha iyi yakalar.
+
+| Model | Val Acc | Parametre |
+|---|---|---|
+| ResNet18 | %56.25 | 11.5M |
+| EfficientNet-B0 | %56.16 | 4.4M |
+
+**Sonuç:** Accuracy açısından anlamlı fark yok. EfficientNet aynı sonucu 2.6 kat daha az parametreyle elde etti — verimlilik açısından üstün ancak performans artışı sağlamadı.
+
+**Çıkarım:** Bottleneck CNN mimarisi değil. Görüntü kolunu güçlendirmek sonucu değiştirmiyor, çünkü sınır verinin kendisinde. Bu bulgu, ViT gibi daha ağır mimarileri denemenin de muhtemelen faydasız olacağını gösteriyor.
+
+### Deney 5 — 5 Günlük Tahmin Horizonu
+Etiket stratejisi değiştirildi: ertesi günün yönü yerine, önümüzdeki 5 günün toplam getirisi (%2 eşik) tahmin edildi. Hipotez: günlük hareketler büyük ölçüde gürültü; 5 günlük trend daha öngörülebilir olmalı.
+
+**Sınıf dağılımı iyileşti:** Yatay %42, Yukarı %33, Aşağı %25 (günlükte Yatay %49 idi).
+
+**Sonuç:** Val Acc %45.34 — baseline'ın (%56.25) belirgin şekilde altında. Overfitting de geri döndü (Train %86, Val %45).
+
+**Çıkarım:** Hipotez çürüdü. 60 günlük teknik veri, 5 gün ilerisi için yeterli sinyal taşımıyor. Kısa vadede momentum ve teknik pattern'ler etkiliyken, orta vadede makro faktörler, haber akışı ve sektör dinamikleri baskın hale geliyor — bunlar mevcut veri setinde yok.
+
+Ayrıca sınıflar dengelendiği için "çoğunluk sınıfını tahmin et" stratejisi artık kolay skor vermiyor; bu anlamda %45 aslında daha dürüst bir sayı.
+
+---
+
+## 🎯 Sonuç: Performans Tavanı
+
+İki bağımsız yönden (mimari iyileştirme + etiket stratejisi değişikliği) yapılan denemeler baseline'ı aşamadı. Bu, **%56'nın mevcut veri seti ve feature seti ile ulaşılabilecek gerçek tavan olduğunu** güçlü şekilde gösteriyor.
+
+Buradan ileriye gitmek için model veya etiket değil, **veri kaynağı** değişmeli:
+- Haber sentiment verisi (FinBERT)
+- Makro göstergeler (VIX, faiz oranları)
+- Sektör ETF korelasyonları
+- Order book / hacim mikroyapısı
+
+Teknik indikatörler ve mum grafiği görüntüsü, günlük yön tahmini için kendi bilgi sınırına ulaşmış durumda.
+
+### Final Deney Tablosu
+
+| # | Deney | Val Acc | Sonuç |
+|---|---|---|---|
+| — | 4 hisse baseline | %53.07 | Referans |
+| 1 | Eşik %2 | — | Vazgeçildi |
+| 2 | Eşik %0.5 + ağırlık | %37.74 | ❌ |
+| 3 | Sınıf ağırlığı (%1 eşik) | %51.89 | ❌ |
+| — | **16 hisse + weight decay** | **%56.25** | ✅ **Final** |
+| 3b | 16 hisse + sınıf ağırlığı | F1 %37.86 | ❌ |
+| 4 | EfficientNet-B0 | %56.16 | ➖ |
+| 5 | 5 günlük horizon | %45.34 | ❌ |
