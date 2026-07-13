@@ -91,10 +91,26 @@ if st.button("Tahmin Et"):
 
     st.subheader(f"Tahmin: {label}")
 
+    confidence = probs.max()
+    THRESHOLD = 0.45
+
     col1, col2, col3 = st.columns(3)
     col1.metric("⬇️ Aşağı", f"{probs[0]:.1%}")
     col2.metric("➡️ Yatay", f"{probs[1]:.1%}")
     col3.metric("⬆️ Yukarı", f"{probs[2]:.1%}")
 
+    if confidence < THRESHOLD:
+        st.info(f"🤔 **Model emin değil** (güven: {confidence:.1%}). "
+                f"Selective prediction eşiğinin ({THRESHOLD:.0%}) altında — "
+                f"bu tahmin düşük güvenilirlikte.")
+    else:
+        st.success(f"✅ Model bu tahminde görece emin (güven: {confidence:.1%})")
+
     st.image(chart_img, caption="Son 60 günlük mum grafiği")
-    st.warning("⚠️ Bu bir ML araştırma projesidir, yatırım tavsiyesi değildir.")
+
+    st.warning(
+        "⚠️ **Bu bir ML araştırma projesidir, yatırım tavsiyesi değildir.**\n\n"
+        "Modelin test accuracy'si %55.8. Ancak backtesting negatif Sharpe ratio "
+        "(-0.10) veriyor ve model 'Aşağı' sınıfını neredeyse hiç tahmin etmiyor. "
+        "Detaylı analiz için repo'daki DEVELOPMENT.md'ye bakın."
+    )
