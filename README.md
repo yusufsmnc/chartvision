@@ -25,6 +25,47 @@
 | GOOGL | 2.18 | +85.8% | +10.3% |
 | TSLA | 0.42 | — | — |
 
+### 🎯 Selective Prediction — ve Neden Yanıltıcı Olduğu
+
+Model her gün tahmin yapmak zorunda değil. Softmax güven skoruna eşik uygulandığında
+accuracy %55.8'den %70.3'e çıkıyor:
+
+![Risk-Coverage Trade-off](assets/risk_coverage.png)
+
+| Threshold (τ) | Coverage | Accuracy | Samples |
+|---|---|---|---|
+| — (full) | 100% | 55.8% | 3408 |
+| 0.45 | 74.8% | 60.5% | 2549 |
+| 0.53 | 46.1% | 62.0% | 1571 |
+| 0.67 | 3.5% | **70.3%** | 118 |
+
+**Ancak bu kazanım gerçek değil.** Yüksek güvenli tahminlerin sınıf dağılımı incelendiğinde:
+
+| Threshold | Aşağı | Yatay | Yukarı |
+|---|---|---|---|
+| 0.35 | 0.0% | 91.7% | 8.3% |
+| 0.45 | 0.0% | **100%** | 0.0% |
+| 0.65 | 0.0% | **100%** | 0.0% |
+
+Model "Aşağı" sınıfını **hiç tahmin etmiyor**, ve τ ≥ 0.45'te tahminlerin tamamı "Yatay".
+Yani yüksek accuracy, modelin bir şey öğrenmesinden değil, belirsizlikte
+**çoğunluk sınıfına kaçmasından** kaynaklanıyor.
+
+### 💸 Backtesting Bunu Doğruluyor
+
+| τ | İşlem | Sharpe | Getiri | Win Rate |
+|---|---|---|---|---|
+| 0.35 | 279 | **-0.10** | -12.5% | 52.7% |
+| ≥0.45 | **0** | — | — | — |
+
+- τ ≥ 0.45'te **hiç işlem sinyali yok** — model sadece "yatay" dediği için pozisyon açılmıyor.
+- τ = 0.35'te 279 işlem yapılıyor ama Sharpe negatif: ortalama kazanç +%1.75,
+  ortalama kayıp -%1.98. %52.7 isabet bu asimetriyi kapatmaya yetmiyor.
+- Bu rakamlara işlem maliyeti ve slippage **dahil değil** — eklendiğinde tablo daha da kötüleşir.
+
+**Sonuç:** Sınıflandırma performansı ile trading kârlılığı aynı şey değil.
+Accuracy baseline'ın üstünde olsa da, model gerçek dünyada kullanılabilir bir sinyal üretmiyor.
+
 ## 🏗️ Architecture
 
 ```
