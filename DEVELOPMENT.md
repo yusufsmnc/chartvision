@@ -270,3 +270,79 @@ Teknik indikatörler ve mum grafiği görüntüsü, günlük yön tahmini için 
 | 3b | 16 hisse + sınıf ağırlığı | F1 %37.86 | ❌ |
 | 4 | EfficientNet-B0 | %56.16 | ➖ |
 | 5 | 5 günlük horizon | %45.34 | ❌ |
+
+---
+
+## 🔍 Deney 6 — Selective Prediction ve Sahte Zafer
+
+### Hipotez
+Model her örnekte tahmin yapmak zorunda değil. Softmax güven skoruna eşik uygulanarak
+sadece emin olunan durumlarda tahmin yapılırsa, accuracy artmalı ve pratik olarak
+kullanılabilir bir sinyal elde edilmeli.
+
+### İlk Bulgu — Umut Verici
+Güven eşiği yükseldikçe accuracy monoton şekilde arttı: %55.8 → %70.3.
+Bu, modelin güven skorunun kalibre olduğunu düşündürdü — model ne zaman bildiğini
+biliyor gibi görünüyordu.
+
+| τ | Coverage | Accuracy |
+|---|---|---|
+| — | 100% | 55.8% |
+| 0.45 | 74.8% | 60.5% |
+| 0.53 | 46.1% | 62.0% |
+| 0.67 | 3.5% | 70.3% |
+
+### Sorgulama — Sınıf Dağılımı Analizi
+"Accuracy arttı" demek yeterli değildi. Yüksek güvenli tahminlerin hangi sınıflara
+ait olduğu incelendi:
+
+| τ | Aşağı | Yatay | Yukarı |
+|---|---|---|---|
+| 0.35 | 0.0% | 91.7% | 8.3% |
+| 0.45 | 0.0% | 100% | 0.0% |
+| 0.55 | 0.0% | 100% | 0.0% |
+| 0.65 | 0.0% | 100% | 0.0% |
+
+**Model "Aşağı" sınıfını hiçbir güven seviyesinde tahmin etmiyor.**
+τ ≥ 0.45'te tahminlerin tamamı "Yatay".
+
+### Doğrulama — Backtesting
+Trading simülasyonu bu teşhisi kesinleştirdi:
+
+| τ | İşlem sayısı | Sharpe | Toplam getiri | Win rate |
+|---|---|---|---|---|
+| 0.35 | 279 | -0.10 | -12.5% | 52.7% |
+| 0.45+ | 0 | — | — | — |
+
+- τ ≥ 0.45'te hiç işlem açılmıyor, çünkü model sadece "yatay" diyor ve yatay = pozisyon yok.
+- τ = 0.35'te işlem yapılıyor ama zarar ediliyor:
+  - Ortalama kazanç: +%1.75
+  - Ortalama kayıp: -%1.98
+  - Kayıplar kazançlardan %13 büyük; %52.7 isabet bu asimetriyi kapatmıyor.
+- İşlem maliyeti ve slippage dahil değil — gerçekte daha kötü olur.
+
+### Çıkarım
+Accuracy'deki %14 puanlık artış **gerçek bir yetenek kazanımı değil.**
+Model belirsizlikte çoğunluk sınıfına ("Yatay") kaçıyor ve yatay günler test setinin
+çoğunluğunu oluşturduğu için isabet oranı yükseliyor.
+
+Bu, sınıflandırma metriklerinin nasıl yanıltabileceğinin somut bir örneği:
+**yüksek accuracy ≠ kullanışlı model.** Metriği tek başına raporlamak yerine,
+tahmin dağılımını ve son kullanım senaryosundaki (burada: trading) performansı
+ölçmek şart.
+
+### Asıl Problem: "Aşağı" Sınıfı Hiç Öğrenilmiyor
+Model üç sınıflı bir problemde fiilen iki sınıf kullanıyor. Muhtemel sebepler:
+
+- **Asimetrik zorluk:** Düşüşler yükselişlerden daha ani ve daha az öngörülebilir
+  (volatilite kümelenmesi, panik satışları). Teknik indikatörler bunları yakalayamıyor.
+- **Sınıf dengesizliği:** Aşağı sınıfı en az örneğe sahip (%24).
+  Sınıf ağırlıkları denendi ancak accuracy'yi düşürdü (Deney 3).
+- **Veri eksikliği:** Düşüşleri tetikleyen faktörler (kötü haber, makro şok, sektör
+  satışı) mevcut feature setinde yok.
+
+### Sonraki Adım Önerisi
+Yön tahmini yerine problemi yeniden tanımlamak daha verimli olabilir:
+- **Volatilite tahmini:** Volatilite kümelenir ve öngörülebilir (GARCH literatürü).
+- **Göreli sıralama:** "Bu 16 hisse arasında hangisi en iyi performansı gösterecek"
+  — piyasa geneli hareketi (beta) elenir, hisseye özgü sinyal kalır.
